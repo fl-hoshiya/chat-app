@@ -13,9 +13,46 @@ const sendButton = document.getElementById('sendButton');
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    loadMessageHistory();
     initializeSSEConnection();
     initializeEventHandlers();
 });
+
+/**
+ * Load message history from database
+ * Implements persistent message storage functionality
+ */
+async function loadMessageHistory() {
+    try {
+        console.log('[History] Loading message history...');
+        
+        const response = await fetch('/messages/recent?limit=50');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.messages) {
+            console.log(`[History] Loaded ${data.messages.length} messages from history`);
+            
+            // Display historical messages
+            data.messages.forEach(message => {
+                displayMessage(message);
+            });
+            
+            // Show loading indicator
+            if (data.messages.length > 0) {
+                showSuccessMessage(`${data.messages.length}件の過去のメッセージを読み込みました`);
+            }
+        }
+        
+    } catch (error) {
+        console.error('[History] Failed to load message history:', error);
+        showErrorMessage('過去のメッセージの読み込みに失敗しました。新しいメッセージは正常に表示されます。', 'warning');
+    }
+}
 
 /**
  * Initialize SSE connection to the server

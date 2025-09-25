@@ -1,12 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const ChatDatabase = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// In-memory message storage
-let messages = [];
+// Initialize PostgreSQL database
+const db = new ChatDatabase();
 
 // SSE client connections management
 let sseClients = [];
@@ -101,11 +103,6 @@ function broadcastMessage(message) {
       }
     } catch (error) {
       console.error(`[Broadcast] Error sending message to client ${client.id}:`, error.message);
-      console.error(`[Broadcast] Error details:`, {
-        code: error.code,
-        errno: error.errno,
-        syscall: error.syscall
-      });
       failedClients.push(index);
       failureCount++;
     }
@@ -188,11 +185,6 @@ app.get('/events', (req, res) => {
     // Handle connection errors
     req.on('error', (err) => {
       console.error(`[SSE] Connection error for client ${clientId}:`, err.message);
-      console.error(`[SSE] Error details:`, {
-        code: err.code,
-        errno: err.errno,
-        syscall: err.syscall
-      });
       sseClients = sseClients.filter(c => c.id !== clientId);
     });
 
@@ -219,7 +211,7 @@ app.get('/', (req, res) => {
 });
 
 // Message sending endpoint
-app.post('/messages', (req, res) => {
+app.post('/messages', async (req, res) => {
   try {
     // Check if request body exists
     if (!req.body) {
@@ -249,12 +241,22 @@ app.post('/messages', (req, res) => {
 
     // Create and store the message
     const newMessage = createMessage(username, message);
-    messages.push(newMessage);
-
-    // Limit message history to prevent memory issues
-    if (messages.length > 100) {
-      messages = messages.slice(-100);
-      console.log('[Memory] Message history trimmed to 100 messages');
+    
+    // Save to PostgreSQL database
+    try {
+      await db.addMessage(newMessage);
+      
+      // Cleanup old messages periodically (keep last 1000 messages)
+      const totalMessages = await db.getMessageCount();
+      if (totalMessages > 1000) {
+        await db.cleanupOldMessages(1000);
+      }
+    } catch (dbError) {
+      console.error('[Database] Failed to save message:', dbError);
+      return res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to save message to database'
+      });
     }
 
     // Broadcast to all connected clients
@@ -293,6 +295,66 @@ app.post('/messages', (req, res) => {
   }
 });
 
+// Get recent messages endpoint (for initial load)
+app.get('/messages/recent', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    
+    if (limit > 100) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Limit cannot exceed 100 messages'
+      });
+    }
+    
+    const messages = await db.getRecentMessages(limit);
+    
+    res.json({
+      success: true,
+      messages: messages.map(msg => ({
+        id: msg.id,
+        username: msg.username,
+        message: msg.message,
+        timestamp: msg.timestamp
+      }))
+    });
+    
+  } catch (error) {
+    console.error('[API] Error retrieving recent messages:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to retrieve recent messages'
+    });
+  }
+});
+
+// Database health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    const isConnected = await db.isConnected();
+    const stats = await db.getStats();
+    
+    res.json({
+      status: 'healthy',
+      database: {
+        connected: isConnected,
+        totalMessages: stats.totalMessages,
+        uniqueUsers: stats.uniqueUsers
+      },
+      server: {
+        uptime: process.uptime(),
+        activeConnections: sseClients.length
+      }
+    });
+  } catch (error) {
+    console.error('[Health] Health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      error: 'Database connection failed'
+    });
+  }
+});
+
 // 404 handler for unknown routes
 app.use('*', (req, res) => {
   console.warn(`[404] Unknown route accessed: ${req.method} ${req.originalUrl}`);
@@ -325,6 +387,7 @@ const server = app.listen(PORT, () => {
   console.log(`[Server] Running on port ${PORT}`);
   console.log(`[Server] Access the chat app at http://localhost:${PORT}`);
   console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`[Server] Database: PostgreSQL`);
 });
 
 // Handle server errors
@@ -344,18 +407,36 @@ server.on('error', (error) => {
 });
 
 // Graceful shutdown handling
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('[Server] SIGTERM received, shutting down gracefully');
+  
+  // Close database connections
+  try {
+    await db.close();
+  } catch (error) {
+    console.error('[Server] Error closing database:', error);
+  }
+  
   server.close(() => {
     console.log('[Server] Server closed');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('[Server] SIGINT received, shutting down gracefully');
+  
+  // Close database connections
+  try {
+    await db.close();
+  } catch (error) {
+    console.error('[Server] Error closing database:', error);
+  }
+  
   server.close(() => {
     console.log('[Server] Server closed');
     process.exit(0);
   });
 });
+
+module.exports = app;

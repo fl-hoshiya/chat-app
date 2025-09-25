@@ -18,6 +18,11 @@ pnpm-debug.log*
 .env.test
 .env.production
 
+# Database files (SQLite - 不要になったが念のため除外)
+*.db
+*.sqlite
+*.sqlite3
+
 # Test coverage reports (開発時のみ必要)
 coverage/
 *.lcov

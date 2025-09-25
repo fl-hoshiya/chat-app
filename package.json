@@ -5,15 +5,21 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "NODE_ENV=development node server.js",
+    "dev:watch": "NODE_ENV=development nodemon server.js",
     "build": "echo 'No build step required'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:integration": "jest tests/final-integration.test.js --runInBand",
-    "test:responsive": "jest tests/responsive-design.test.js",
-    "test:performance": "jest tests/performance-memory.test.js --runInBand",
+
+    "test:postgresql": "jest tests/postgresql.test.js",
     "test:all": "jest --runInBand",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build",
+    "docker:restart": "docker-compose restart app",
+    "docker:clean": "docker-compose down -v",
     "postinstall": "echo 'Dependencies installed successfully'"
   },
   "keywords": [
@@ -33,14 +39,17 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "jest": "29.7.0",
     "supertest": "6.3.3",
     "@jest/globals": "29.7.0",
     "jsdom": "23.0.1",
-    "eventsource": "2.0.2"
+    "eventsource": "2.0.2",
+    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=16.0.0",

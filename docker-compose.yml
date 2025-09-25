@@ -1,0 +1,40 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sse-chat-postgres
+    environment:
+      POSTGRES_DB: sse_chat_db
+      POSTGRES_USER: chat_user
+      POSTGRES_PASSWORD: chat_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat_user -d sse_chat_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Chat Application
+  app:
+    build: .
+    container_name: sse-chat-app
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      DATABASE_URL: postgresql://chat_user:chat_password@postgres:5432/sse_chat_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_data:
