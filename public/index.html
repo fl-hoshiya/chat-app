@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE チャットアプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>リアルタイムチャット</h1>
+        </header>
+        
+        <main>
+            <!-- メッセージ一覧エリア -->
+            <div id="messages" class="messages-container">
+                <!-- メッセージがここに動的に追加されます -->
+            </div>
+            
+            <!-- チャット入力フォーム -->
+            <form id="chatForm" class="chat-form">
+                <div class="input-group">
+                    <label for="username">ユーザー名:</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="ユーザー名を入力" 
+                        maxlength="50"
+                        required
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="messageInput">メッセージ:</label>
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        name="message" 
+                        placeholder="メッセージを入力" 
+                        maxlength="500"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" id="sendButton" class="send-button">
+                    送信
+                </button>
+            </form>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

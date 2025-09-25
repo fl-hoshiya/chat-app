@@ -1,0 +1,42 @@
+{
+  "name": "sse-chat-app",
+  "version": "1.0.0",
+  "description": "A simple real-time chat application using Node.js, Express, and Server-Sent Events (SSE)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest tests/final-integration.test.js --runInBand",
+    "test:responsive": "jest tests/responsive-design.test.js",
+    "test:performance": "jest tests/performance-memory.test.js --runInBand",
+    "test:all": "jest --runInBand"
+  },
+  "keywords": ["chat", "sse", "server-sent-events", "express", "nodejs", "realtime"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "@jest/globals": "^29.7.0",
+    "jsdom": "^23.0.1",
+    "eventsource": "^2.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "server.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
+  }
+}
